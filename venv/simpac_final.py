@@ -1,7 +1,7 @@
 import datetime
 import json
 from collections import OrderedDict
-
+import csv
 import mysql.connector
 import numpy as np
 import pandas as pd
@@ -112,7 +112,31 @@ def getData(DRInfo, sDate, eDate):
             totalQty = DR['N' + str(i) + '_ProdQty']
 
             print("sTime : ", sTime, ", eTime : ", eTime, totalQty)
-            getOneTapData(sTime,eTime,totalQty)
+            get = getOneTapData(sTime, eTime, totalQty)
+            print("======================1234")
+
+            for data in get:
+                print(get[data], DR['date'])
+                get[data]['date'] = DR['date']
+                get[data]['sTime'] = sTime
+                get[data]['eTime'] = eTime
+            result.append(get)
+
+    with open('nodeInfo.csv', 'w', newline='') as after:
+        # fieldName = ["old_tapPos", "new_tapPos", "stayTime"]
+        fieldName = ['date' , 'sTime', 'eTime', 'tapPos', 'stayTime', 'stayTimeNext', 'stayTimePrev', 'prob', 'probNext', 'probPrev', 'ElePo','ElePoNext','ElePoPrev','Qty', 'QtyNext', 'QtyPrev','UPA', 'UPANext', 'UPAPrev']
+        writer = csv.DictWriter(after, fieldnames=fieldName)
+        writer.writeheader()
+
+        for ondDay in result:
+            print("======================")
+            for oneTap in ondDay:
+                # oneTap['tapPos'] = index
+
+                ondDay[oneTap]['tapPos'] = oneTap
+                print(ondDay[oneTap])
+                writer.writerow(ondDay[oneTap])
+
 
 
 
@@ -124,7 +148,7 @@ def getOneTapData(sTime, eTime, totalQty):
     result = []
     tmp = {}
     for i in range(0, 14):
-        tmp[str(i)] = OrderedDict()
+        tmp[str(i)] = {}
         tmp[str(i)]['stayTime'] = 0
         tmp[str(i)]['stayTimeNext'] = 0
         tmp[str(i)]['stayTimePrev'] = 0
@@ -187,105 +211,89 @@ def getOneTapData(sTime, eTime, totalQty):
     for new_data in tmp:
         print(new_data)
 
-    # for new_data in tmp:
-    #     if new_data != '0' and new_data != '13':
-    #         tmp[new_data]['stayTimeNext'] = tmp[str(int(new_data) + 1)]['stayTime']
-    #         tmp[new_data]['stayTimePrev'] = tmp[str(int(new_data) - 1)]['stayTime']
-    #         if tmp[new_data]['stayTime'] != 0:
-    #             tmp[new_data]['prob'] = tmp[new_data]['stayTime'] / totalcount
-    #         else:
-    #             tmp[new_data]['prob'] = 0
-    #         if tmp[new_data]['stayTimeNext'] != 0:
-    #             tmp[new_data]['probNext'] = tmp[new_data]['stayTimeNext'] / totalcount
-    #         else:
-    #             tmp[new_data]['probNext'] = 0
-    #         if tmp[new_data]['stayTimePrev']:
-    #             tmp[new_data]['probPrev'] = tmp[new_data]['stayTimePrev'] / totalcount
-    #         else:
-    #             tmp[new_data]['probPrev'] = 0
-    #
-    #         tmp[new_data]['ElePoNext'] = tmp[str(int(new_data) + 1)]['ElePo']
-    #         tmp[new_data]['ElePoPrev'] = tmp[str(int(new_data) - 1)]['ElePo']
-    #         tmp[new_data]['Qty'] = tmp[new_data]['prob'] * totalQty
-    #         tmp[new_data]['QtyNext'] = tmp[new_data]['probNext'] * totalQty
-    #         tmp[new_data]['QtyPrev'] = tmp[new_data]['probPrev'] * totalQty
-    #
-    #         if tmp[new_data]['ElePo'] != 0:
-    #             tmp[new_data]['UPA'] = tmp[new_data]['ElePo'] / tmp[new_data]['Qty']
-    #         else:
-    #             tmp[new_data]['UPA'] = 0
-    #         if tmp[new_data]['ElePoNext'] != 0:
-    #             tmp[new_data]['UPANext'] = tmp[new_data]['ElePoNext'] / tmp[new_data]['QtyNext']
-    #         else:
-    #             tmp[new_data]['UPANext'] = 0
-    #         if tmp[new_data]['ElePoPrev'] != 0:
-    #             tmp[new_data]['UPAPrev'] = tmp[new_data]['ElePoPrev'] / tmp[new_data]['QtyPrev']
-    #         else:
-    #             tmp[new_data]['UPAPrev'] = 0
-    #
-    #     elif new_data == '0':
-    #         tmp[new_data]['stayTimeNext'] = tmp[str(int(new_data) + 1)]['stayTime']
-    #         tmp[new_data]['stayTimePrev'] = 0
-    #         tmp[new_data]['countNext'] = tmp[str(int(new_data) + 1)]['count']
-    #         tmp[new_data]['countPrev'] = 0
-    #         if tmp[new_data]['stayTime'] != 0:
-    #             tmp[new_data]['prob'] = tmp[new_data]['stayTime'] / totalcount
-    #         else:
-    #             tmp[new_data]['prob'] = 0
-    #         if tmp[new_data]['stayTimeNext'] != 0:
-    #             tmp[new_data]['probNext'] = tmp[new_data]['stayTimeNext'] / totalcount
-    #         else:
-    #             tmp[new_data]['probNext'] = 0
-    #         tmp[new_data]['probPrev'] = 0
-    #         tmp[new_data]['ElePoNext'] = tmp[str(int(new_data) + 1)]['ElePo']
-    #         tmp[new_data]['ElePoPrev'] = 0
-    #         tmp[new_data]['Qty'] = tmp[new_data]['prob'] * totalQty
-    #         tmp[new_data]['QtyNext'] = tmp[new_data]['probNext'] * totalQty
-    #         tmp[new_data]['QtyPrev'] = 0
-    #
-    #         if tmp[new_data]['ElePo'] != 0:
-    #             tmp[new_data]['UPA'] = tmp[new_data]['ElePo'] / tmp[new_data]['Qty']
-    #         else:
-    #             tmp[new_data]['UPA'] = 0
-    #         if tmp[new_data]['ElePoNext'] != 0:
-    #             tmp[new_data]['UPANext'] = tmp[new_data]['ElePoNext'] / tmp[new_data]['QtyNext']
-    #         else:
-    #             tmp[new_data]['UPANext'] = 0
-    #         tmp[new_data]['UPAPrev'] = 0
-    #
-    #
-    #     elif new_data == '13':
-    #         tmp[new_data]['stayTimeNext'] = 0
-    #         tmp[new_data]['stayTimePrev'] = tmp[str(int(new_data) - 1)]['stayTime']
-    #         tmp[new_data]['countNext'] = 0
-    #         tmp[new_data]['countPrev'] = tmp[str(int(new_data) - 1)]['count']
-    #         if tmp[new_data]['stayTime'] != 0:
-    #             tmp[new_data]['prob'] = tmp[new_data]['stayTime'] / totalcount
-    #         else:
-    #             tmp[new_data]['prob'] = 0
-    #         tmp[new_data]['probNext'] = 0
-    #         if tmp[new_data]['stayTimePrev']:
-    #             tmp[new_data]['probPrev'] = tmp[new_data]['stayTimePrev'] / totalcount
-    #         else:
-    #             tmp[new_data]['probPrev'] = 0
-    #         tmp[new_data]['ElePoNext'] = 0
-    #         tmp[new_data]['ElePoPrev'] = tmp[str(int(new_data) - 1)]['ElePo']
-    #         tmp[new_data]['Qty'] = tmp[new_data]['prob'] * totalQty
-    #         tmp[new_data]['QtyNext'] = 0
-    #         tmp[new_data]['QtyPrev'] = tmp[new_data]['probPrev'] * totalQty
-    #         if tmp[new_data]['ElePo'] != 0:
-    #             tmp[new_data]['UPA'] = tmp[new_data]['ElePo'] / tmp[new_data]['Qty']
-    #         else:
-    #             tmp[new_data]['UPA'] = 0
-    #         tmp[new_data]['UPANext'] = 0
-    #         if tmp[new_data]['ElePoPrev'] != 0:
-    #             tmp[new_data]['UPAPrev'] = tmp[new_data]['ElePoPrev'] / tmp[new_data]['QtyPrev']
-    #         else:
-    #             tmp[new_data]['UPAPrev'] = 0
+    for new_data in tmp:
+        if new_data != '0' and new_data != '13':
+            if tmp[new_data]['stayTime'] != 0:
+                tmp[new_data]['prob'] = tmp[new_data]['stayTime'] / totalcount
+            else:
+                tmp[new_data]['prob'] = 0
+            if tmp[new_data]['stayTimeNext'] != 0:
+                tmp[new_data]['probNext'] = tmp[new_data]['stayTimeNext'] / totalcount
+            else:
+                tmp[new_data]['probNext'] = 0
+            if tmp[new_data]['stayTimePrev']:
+                tmp[new_data]['probPrev'] = tmp[new_data]['stayTimePrev'] / totalcount
+            else:
+                tmp[new_data]['probPrev'] = 0
+
+            tmp[new_data]['Qty'] = tmp[new_data]['prob'] * totalQty
+            tmp[new_data]['QtyNext'] = tmp[new_data]['probNext'] * totalQty
+            tmp[new_data]['QtyPrev'] = tmp[new_data]['probPrev'] * totalQty
+
+            if tmp[new_data]['ElePo'] != 0:
+                tmp[new_data]['UPA'] = tmp[new_data]['ElePo'] / tmp[new_data]['Qty']
+            else:
+                tmp[new_data]['UPA'] = 0
+            if tmp[new_data]['ElePoNext'] != 0:
+                tmp[new_data]['UPANext'] = tmp[new_data]['ElePoNext'] / tmp[new_data]['QtyNext']
+            else:
+                tmp[new_data]['UPANext'] = 0
+            if tmp[new_data]['ElePoPrev'] != 0:
+                tmp[new_data]['UPAPrev'] = tmp[new_data]['ElePoPrev'] / tmp[new_data]['QtyPrev']
+            else:
+                tmp[new_data]['UPAPrev'] = 0
+
+        elif new_data == '0':
+            if tmp[new_data]['stayTime'] != 0:
+                tmp[new_data]['prob'] = tmp[new_data]['stayTime'] / totalcount
+            else:
+                tmp[new_data]['prob'] = 0
+            if tmp[new_data]['stayTimeNext'] != 0:
+                tmp[new_data]['probNext'] = tmp[new_data]['stayTimeNext'] / totalcount
+            else:
+                tmp[new_data]['probNext'] = 0
+            tmp[new_data]['probPrev'] = 0
+            tmp[new_data]['Qty'] = tmp[new_data]['prob'] * totalQty
+            tmp[new_data]['QtyNext'] = tmp[new_data]['probNext'] * totalQty
+            tmp[new_data]['QtyPrev'] = 0
+
+            if tmp[new_data]['ElePo'] != 0:
+                tmp[new_data]['UPA'] = tmp[new_data]['ElePo'] / tmp[new_data]['Qty']
+            else:
+                tmp[new_data]['UPA'] = 0
+            if tmp[new_data]['ElePoNext'] != 0:
+                tmp[new_data]['UPANext'] = tmp[new_data]['ElePoNext'] / tmp[new_data]['QtyNext']
+            else:
+                tmp[new_data]['UPANext'] = 0
+            tmp[new_data]['UPAPrev'] = 0
+
+
+        elif new_data == '13':
+            if tmp[new_data]['stayTime'] != 0:
+                tmp[new_data]['prob'] = tmp[new_data]['stayTime'] / totalcount
+            else:
+                tmp[new_data]['prob'] = 0
+            tmp[new_data]['probNext'] = 0
+            if tmp[new_data]['stayTimePrev']:
+                tmp[new_data]['probPrev'] = tmp[new_data]['stayTimePrev'] / totalcount
+            else:
+                tmp[new_data]['probPrev'] = 0
+            tmp[new_data]['Qty'] = tmp[new_data]['prob'] * totalQty
+            tmp[new_data]['QtyNext'] = 0
+            tmp[new_data]['QtyPrev'] = tmp[new_data]['probPrev'] * totalQty
+            if tmp[new_data]['ElePo'] != 0:
+                tmp[new_data]['UPA'] = tmp[new_data]['ElePo'] / tmp[new_data]['Qty']
+            else:
+                tmp[new_data]['UPA'] = 0
+            tmp[new_data]['UPANext'] = 0
+            if tmp[new_data]['ElePoPrev'] != 0:
+                tmp[new_data]['UPAPrev'] = tmp[new_data]['ElePoPrev'] / tmp[new_data]['QtyPrev']
+            else:
+                tmp[new_data]['UPAPrev'] = 0
 
     for qwer in tmp:
         print(tmp[qwer])
-    result.append(tmp)
+    return tmp
 
 
 DRInfo = get_Tapping_Info_By_DayReport('20181202', "20181230")

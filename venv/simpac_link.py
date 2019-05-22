@@ -1,29 +1,8 @@
 import datetime
+
 import mysql.connector
 import numpy as np
 import pandas as pd
-
-
-def median(v):
-    n = len(v)
-    sorted_v = sorted(v)  # 정렬해준뒤에
-    midpoint = n // 2  # // 로 나누면 int형이 됨. / 로 나누면 float
-    if n % 2 == 1:
-        return sorted_v[midpoint]  # 리스트가 홀 수면 가운데 값
-    else:
-        lo = midpoint - 1  # 짝수면 가운데의 2개의 값의 평균
-        hi = midpoint
-        return (sorted_v[lo] + sorted_v[hi]) / 2
-
-
-def quantile(x, p):
-    p_index = int(p * len(x))
-    return sorted(x)[p_index]
-
-
-def interquartile_range(x):
-    return quantile(x, 0.75) - quantile(x, 0.25)
-
 
 mydb = mysql.connector.connect(
     host="113.198.137.146",
@@ -33,10 +12,9 @@ mydb = mysql.connector.connect(
     database="SIMPAC_METAL",
     charset='utf8'
 )
+mycursor = mydb.cursor(dictionary=True)
 
-mycursor = mydb.cursor()
-
-sql = "SELECT ProdDate,ProdName, MatName1, MatName2, MatName3, MatName4, MatName5, MatName6, MatName7, MatName8, MatName9, MatName10,N1_TappingSTime,N2_TappingSTime,N3_TappingSTime,N4_TappingSTime,N5_TappingSTime,N1_ProdQty, N2_ProdQty, N3_ProdQty, N4_ProdQty, N5_ProdQty, NT_ProdQty FROM TS_EFN_DAYREPORT WHERE ProdDate > '20181217' AND ProdDate < '20181231'"
+sql = "SELECT * FROM TS_EFN_DAYREPORT WHERE ProdDate > '20181202' AND ProdDate < '20181231'"
 
 mycursor.execute(sql)
 
@@ -44,27 +22,43 @@ myresult = mycursor.fetchall()
 
 countdict = []
 for x in myresult:
+    print(x)
     Mat = []
-    for i in range(2, 12):
-        if x[i] != '':
-            Mat.append(x[i])
+    for i in range(1, 11):
+        if x["MatName" + str(i)] != '':
+            Mat.append(x["MatName" + str(i)])
+
+    print(Mat)
+    boil = []
+    for i in range(1, 6):
+        nBoil = {}
+        nBoil["N" + str(i) + "_TappingTime"] = (x['N' + str(i) + "_TappingTime"])
+        MatInfo = []
+        for i, mati in enumerate(Mat):
+            Matj = {}
+            Matj["Mati"]
+
+
+    # for i in range(2, 12):
+    #     if x[i] != '':
+    #         Mat.append(x[i])
 
     countdict.append(
         {
-            "date": x[0],
-            "ProdName": x[1],
+            "date": x['ProdDate'],
+            "ProdName": x['ProdName'],
             "Mat": Mat,
-            "N1_TappingTime": x[12],
-            "N2_TappingTime": x[13],
-            "N3_TappingTime": x[14],
-            "N4_TappingTime": x[15],
-            "N5_TappingTime": x[16],
-            "N1_ProdQty": x[17],
-            "N2_ProdQty": x[18],
-            "N3_ProdQty": x[19],
-            "N4_ProdQty": x[20],
-            "N5_ProdQty": x[21],
-            "NT_ProdQty": x[22]
+            "N1_TappingTime": x['N1_TappingTime'],
+            "N2_TappingTime": x['N2_TappingTime'],
+            "N3_TappingTime": x['N3_TappingTime'],
+            "N4_TappingTime": x['N4_TappingTime'],
+            "N5_TappingTime": x['N5_TappingTime'],
+            "N1_ProdQty": x['N1_ProdQty'],
+            "N2_ProdQty": x['N2_ProdQty'],
+            "N3_ProdQty": x['N3_ProdQty'],
+            "N4_ProdQty": x['N4_ProdQty'],
+            "N5_ProdQty": x['N5_ProdQty'],
+            "NT_ProdQty": x['NT_ProdQty']
         }
     )
     print(countdict)
@@ -89,7 +83,6 @@ new_Data = dict()
 new_Data_keys = []
 elePowerSum = 0
 
-
 for data in myresult:
     if rownum == 0:
         new_Data_keys = data.keys()
@@ -107,8 +100,10 @@ for data in myresult:
         new_tapPos = data['tapPos']
         if (old_tapPos != new_tapPos):
 
-            sTime2 = datetime.datetime(int(sTime[0:4]), int(sTime[5:7]), int(sTime[8:10]), int(sTime[11:13]), int(sTime[14:16]), int(sTime[17:19]))
-            eTime2 = datetime.datetime(int(eTime[0:4]), int(eTime[5:7]), int(eTime[8:10]), int(eTime[11:13]), int(eTime[14:16]), int(eTime[17:19]))
+            sTime2 = datetime.datetime(int(sTime[0:4]), int(sTime[5:7]), int(sTime[8:10]), int(sTime[11:13]),
+                                       int(sTime[14:16]), int(sTime[17:19]))
+            eTime2 = datetime.datetime(int(eTime[0:4]), int(eTime[5:7]), int(eTime[8:10]), int(eTime[11:13]),
+                                       int(eTime[14:16]), int(eTime[17:19]))
             stayTime = (eTime2 - sTime2).seconds
             row = {}
             row["old_tapPos"] = old_tapPos
@@ -118,7 +113,7 @@ for data in myresult:
             row["stayTime"] = stayTime
 
             row["ElePowerSum"] = elePowerSum
-            row["ElePowerPerSec"] = elePowerSum/count
+            row["ElePowerPerSec"] = elePowerSum / count
             # row["ampereA1"] = np.median(np.array(new_Data['ampereA1']).astype(np.float))
             # row["ampereA1"] = np.median(np.array(new_Data['ampereA1']).astype(np.float))
             # row["ampereB1"] = np.median(np.array(new_Data['ampereB1']).astype(np.float))
@@ -141,7 +136,6 @@ for data in myresult:
             # row["trTemp"] = np.median(np.array(new_Data['trTemp']).astype(np.float))
             print(row)
 
-
             old_tapPos = new_tapPos
             sTime = data['dates']
             eTime = 0
@@ -154,7 +148,5 @@ for data in myresult:
             elePowerSum += data['avgElePower']
             for index in new_Data_keys:
                 new_Data[index].append(data[index])
-
-
 
 print(datetime.datetime(2018, 12, 18, 15, 55, 47, 930))
