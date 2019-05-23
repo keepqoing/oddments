@@ -1,53 +1,142 @@
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 from collections import OrderedDict
-from selenium import webdriver
 import requests
-
+import time
+from random import *
 
 client = MongoClient("localhost", 27017)
 database = client.test
-collection = database.weather
+collection = database.world_pop
 
 
+url = "https://www.worldometers.info"
+page =  "/population/"
 
-page = "https://new.land.naver.com/complexes?ms=36.6362841,127.471323,10&a=APT:ABYG:JGC&b=A1:B1:B2:B3&e=RETAIL"
-path="C:\\chromedriver.exe"
-driver = webdriver.Chrome(path)
-driver.get(page)
-html = driver.page_source
+page = requests.get(url + page, timeout=5)
 
-
-soup = BeautifulSoup(html, 'html.parser')
+soup = BeautifulSoup(page.content, 'html.parser')
 # general_list = soup.findAll("div", id = "complex_map")
-general_list = soup.findAll("a", {"class": "marker_complex--apart"})
+div = soup.findAll("div", {"class": "content-inner"})
+print(div)
 
-for data in general_list:
-    price = str()
-    consYear = str()
+ul_list = div.findAll("ul")
+countryLink_ul = ul_list[len(ul_list) - 1]
 
-
-    apart_features = data.findAll("div", {'class' : 'complex_feature'})
-    for apart_features in apart_features:
-        print(apart_features)
-
-    apart_infos = data.findAll("div", {'class' : 'complex_infos'})
-    for apart_info in apart_infos:
-        print(apart_info)
+countryLink_a_list = countryLink_ul.findAll("a")
 
 
-    print(data)
+countryPages = []
+for countryLink_a in countryLink_a_list:
+    countryPages.append(countryLink_a["href"])
 
-# list_of_dl = general_list.find_all("dl")
+print(countryPages)
+
+
 #
-# for in_each_dl in list_of_dl:
-#     list_of_dt = in_each_dl.find_all("dt")[0]
-#     list_of_dd = in_each_dl.find_all("dd")[1]
-#     list_of_alt = in_each_dl.find("img").attrs['alt']
-#     data = OrderedDict()
-#     data['City'] = list_of_dt.get_text()
-#     data['Temperature'] = list_of_dd.get_text()
-#     data['Weather'] = list_of_alt
-#     print(data)
-#     collection.insert(data)
-#     # collection.insertOne({"City name: " + list_of_dt.get_text() + ", Temperature: " + list_of_dd.get_text() + ", Weather: " + list_of_alt})
+#
+#
+# continentPages = []
+#
+# for continent in continents:
+#     continentPage = continent.find("a")["href"]
+#     continentPages.append(continentPage)
+#
+# countryPages = []
+#
+# for continentPage in continentPages:
+#     page = requests.get(url + continentPage, timeout=5)
+#     soup = BeautifulSoup(page.content, 'html.parser')
+#     countries = soup.findAll("div", {"class": "noli"})
+#
+#     for country in countries:
+#         countryLis = country.findAll("li")
+#
+#         for index, countryLi in enumerate(countryLis):
+#             if index == 0:
+#                 continue
+#             countryPage = countryLi.find("a")["href"]
+#             countryPages.append(countryPage)
+#
+# for countryPage in countryPages:
+#     print(countryPage)
+#
+# for countryPage in countryPages:
+#     countryData = {}
+#     countryPage = countryPage.replace("http", "https")
+#     if url in countryPage:
+#
+#         print("url in countryPage")
+#         print(countryPage)
+#         page = requests.get(countryPage, timeout=5)
+#
+#     else:
+#         print(url + countryPage)
+#         page = requests.get(url + countryPage, timeout=5)
+#
+#
+#     soup = BeautifulSoup(page.content, 'html.parser')
+#
+#     countryInfo = soup.find("ul", {"class" : "breadcrumb"})
+#     countryInfo_li = countryInfo.findAll("li")
+#
+#     continentName = countryInfo_li[3].get_text()
+#     regionName = countryInfo_li[4].get_text()
+#     countryName = countryInfo_li[5].get_text()
+#
+#     countryData['continentName'] = continentName
+#     countryData['regionName'] = regionName
+#     countryData['countryName'] = countryName
+#     countryData['historical_Data'] = []
+#     countryData['forecast_Data'] = []
+#
+#     print(continentName,regionName, countryName)
+#
+#     tables = soup.findAll("table", {"class" : "table table-striped table-bordered table-hover table-condensed table-list"})
+#     population_historical = tables[0]
+#     print(population_historical)
+#
+#     thead = population_historical.find("thead")
+#     th_list = thead.findAll("th")
+#
+#     columns = []
+#     for th in th_list:
+#         columns.append(th.get_text())
+#     print(columns)
+#
+#     tbody = population_historical.find("tbody")
+#     tr_list = tbody.findAll("tr")
+#
+#
+#     for tr in tr_list:
+#         td_list = tr.findAll("td")
+#         historical_data = {}
+#         for index, td in enumerate(td_list):
+#             # print(columns[index], " : ", td.get_text())
+#             historical_data[columns[index]] = td.get_text()
+#
+#         countryData['historical_Data'].append(historical_data)
+#         print(historical_data)
+#
+#
+#     population_forecast = tables[1]
+#     print(population_forecast)
+#     tbody = population_forecast.find("tbody")
+#     tr_list = tbody.findAll("tr")
+#
+#
+#     for tr in tr_list:
+#         td_list = tr.findAll("td")
+#         forecast_data = {}
+#         for index, td in enumerate(td_list):
+#             # print(columns[index], " : ", td.get_text())
+#             forecast_data[columns[index]] = td.get_text()
+#
+#         countryData['forecast_Data'].append(forecast_data)
+#         print(forecast_data)
+#
+#     print(countryData)
+#     collection.insert_one(countryData)
+#
+#     # rand_value = randint(1, 10)
+#     # time.sleep(rand_value)
