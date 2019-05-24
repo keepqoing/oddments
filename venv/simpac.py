@@ -1,29 +1,8 @@
 import datetime
 import mysql.connector
 import numpy as np
-import pandas as pd
-
-
-def median(v):
-    n = len(v)
-    sorted_v = sorted(v)  # 정렬해준뒤에
-    midpoint = n // 2  # // 로 나누면 int형이 됨. / 로 나누면 float
-    if n % 2 == 1:
-        return sorted_v[midpoint]  # 리스트가 홀 수면 가운데 값
-    else:
-        lo = midpoint - 1  # 짝수면 가운데의 2개의 값의 평균
-        hi = midpoint
-        return (sorted_v[lo] + sorted_v[hi]) / 2
-
-
-def quantile(x, p):
-    p_index = int(p * len(x))
-    return sorted(x)[p_index]
-
-
-def interquartile_range(x):
-    return quantile(x, 0.75) - quantile(x, 0.25)
-
+import csv
+# import pandas as pd
 
 mydb = mysql.connector.connect(
     host="113.198.137.146",
@@ -36,20 +15,20 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor()
 
-sql = "SELECT ProdDate,ProdName, MatName1, MatName2, MatName3, MatName4, MatName5, MatName6, MatName7, MatName8, MatName9, MatName10,N1_TappingSTime,N2_TappingSTime,N3_TappingSTime,N4_TappingSTime,N5_TappingSTime,N1_ProdQty, N2_ProdQty, N3_ProdQty, N4_ProdQty, N5_ProdQty, NT_ProdQty FROM TS_EFN_DAYREPORT WHERE ProdDate > '20181217' AND ProdDate < '20181231'"
+sql = "SELECT ProdDate,ProdName, MatName1, MatName2, MatName3, MatName4, MatName5, MatName6, MatName7, MatName8, MatName9, MatName10,N1_TappingSTime,N2_TappingSTime,N3_TappingSTime,N4_TappingSTime,N5_TappingSTime,N1_ProdQty, N2_ProdQty, N3_ProdQty, N4_ProdQty, N5_ProdQty, NT_ProdQty FROM TS_EFN_DAYREPORT WHERE ProdDate > '20181202' AND ProdDate < '20181231'"
 
 mycursor.execute(sql)
 
 myresult = mycursor.fetchall()
 
-countdict = []
+dayReport_list = []
 for x in myresult:
     Mat = []
     for i in range(2, 12):
         if x[i] != '':
             Mat.append(x[i])
 
-    countdict.append(
+    dayReport_list.append(
         {
             "date": x[0],
             "ProdName": x[1],
@@ -67,93 +46,104 @@ for x in myresult:
             "NT_ProdQty": x[22]
         }
     )
-    print(countdict)
+    print(dayReport_list)
 
-sql = "SELECT DATE_FORMAT(GetDT, '%Y-%m-%d %H:%i:%s') AS dates , TAP_POS as tapPos, TElePower AS avgTElePower, ElePower AS avgElePower, IntPower AS avgIntPower  FROM TS_EFN_GETDATA WHERE DATE_FORMAT(GetDT, '%Y-%m-%d %H:%i:%s') BETWEEN STR_TO_DATE ('" + \
-      countdict[0]['date'] + " " + countdict[0]['N1_TappingTime'] + ":00','%Y%m%d %H:%i:%s') AND STR_TO_DATE ('" + \
-      countdict[0]['date'] + " " + countdict[0]['N2_TappingTime'] + ":00','%Y%m%d %H:%i:%s')"
-print(sql)
+
+
+with open('nodeInfo.csv', 'w', newline='') as after:
+    # fieldName = ["old_tapPos", "new_tapPos", "stayTime"]
+    fieldName = ['old_tapPos', 'new_tapPos', 'sTime', 'eTime', 'stayTime', 'ElePowerSum', 'ElePowerPerSec',
+                 'ampereA2_Max', 'ampereB2_Max', 'ampereC2_Max', 'ampereA2_Min', 'ampereB2_Min', 'ampereC2_Min',
+                 'ampereA2_Avg', 'ampereB2_Avg', 'ampereC2_Avg',
+                 'epiA_Max', 'epiB_Max', 'epiC_Max', 'epiA_Min', 'epiB_Min', 'epiC_Min', 'epiA_Avg', 'epiB_Avg',
+                 'epiC_Avg']
+    writer = csv.DictWriter(after, fieldnames=fieldName)
+    writer.writeheader()
+
+for dayReport in dayReport_list:
+    sql = "SELECT DATE_FORMAT(GetDT, '%Y-%m-%d %H:%i:%s') AS dates , TAP_POS as tapPos, TElePower AS avgTElePower, ElePower AS avgElePower, IntPower AS avgIntPower, 1Ampere_A as ampereA1, 2Ampere_A as ampereA2, 2Ampere_B as ampereB2, 2Ampere_C as ampereC2, EPI_A as epiA, EPI_B as epiB, EPI_C as epiC FROM TS_EFN_GETDATA WHERE DATE_FORMAT(GetDT, '%Y-%m-%d %H:%i:%s') BETWEEN STR_TO_DATE ('" + \
+          dayReport['date'] + " " + dayReport['N1_TappingTime'] + ":00','%Y%m%d %H:%i:%s') AND STR_TO_DATE ('" + \
+          dayReport['date'] + " " + dayReport['N2_TappingTime'] + ":00','%Y%m%d %H:%i:%s')"
+    print(sql)
 # sql = "SHOW COLUMNS FROM TS_EFN_GETDATA"
 
-mycursor = mydb.cursor(dictionary=True)
-mycursor.execute(sql)
+    mycursor = mydb.cursor(dictionary=True)
+    mycursor.execute(sql)
+    myresult = mycursor.fetchall()
 
-myresult = mycursor.fetchall()
+    old_tapPos = 0
+    sTime = 0
+    eTime = 0
+    count = 0
+    rownum = 0
+    new_Data = dict()
+    new_Data_keys = []
+    elePowerSum = 0
 
-old_tapPos = 0
-sTime = 0
-eTime = 0
-count = 0
-rownum = 0
-new_Data = dict()
-new_Data_keys = []
-elePowerSum = 0
+    for data in myresult:
+        if rownum == 0:
+            new_Data_keys = data.keys()
 
-
-for data in myresult:
-    if rownum == 0:
-        new_Data_keys = data.keys()
-
-        rownum = 1
-        sTime = data['dates']
-        old_tapPos = data['tapPos']
-
-        for index in new_Data_keys:
-            new_Data[index] = []
-            new_Data[index].append(data[index])
-
-
-    else:
-        new_tapPos = data['tapPos']
-        if (old_tapPos != new_tapPos):
-
-            sTime2 = datetime.datetime(int(sTime[0:4]), int(sTime[5:7]), int(sTime[8:10]), int(sTime[11:13]), int(sTime[14:16]), int(sTime[17:19]))
-            eTime2 = datetime.datetime(int(eTime[0:4]), int(eTime[5:7]), int(eTime[8:10]), int(eTime[11:13]), int(eTime[14:16]), int(eTime[17:19]))
-            stayTime = (eTime2 - sTime2).seconds
-            row = {}
-            row["old_tapPos"] = old_tapPos
-            row["new_tapPos"] = new_tapPos
-            row["sTime"] = sTime2.strftime("%Y-%m-%d %H:%M:%S")
-            row["eTime"] = eTime2.strftime("%Y-%m-%d %H:%M:%S")
-            row["stayTime"] = stayTime
-
-            row["ElePowerSum"] = elePowerSum
-            row["ElePowerPerSec"] = elePowerSum/count
-            # row["ampereA1"] = np.median(np.array(new_Data['ampereA1']).astype(np.float))
-            # row["ampereA1"] = np.median(np.array(new_Data['ampereA1']).astype(np.float))
-            # row["ampereB1"] = np.median(np.array(new_Data['ampereB1']).astype(np.float))
-            # row["ampereC1"] = np.median(np.array(new_Data['ampereC1']).astype(np.float))
-            # row["ampereA2"] = np.median(np.array(new_Data['ampereA2']).astype(np.float))
-            # row["ampereB2"] = np.median(np.array(new_Data['ampereB2']).astype(np.float))
-            # row["ampereC2"] = np.median(np.array(new_Data['ampereC2']).astype(np.float))
-            # row["voltageA1"] = np.median(np.array(new_Data['voltageA1']).astype(np.float))
-            # row["voltageB1"] = np.median(np.array(new_Data['voltageB1']).astype(np.float))
-            # row["voltageC1"] = np.median(np.array(new_Data['voltageC1']).astype(np.float))
-            # row["voltageA2"] = np.median(np.array(new_Data['voltageA2']).astype(np.float))
-            # row["voltageB2"] = np.median(np.array(new_Data['voltageB2']).astype(np.float))
-            # row["voltageC2"] = np.median(np.array(new_Data['voltageC2']).astype(np.float))
-            # row["pfA"] = np.median(np.array(new_Data['pfA']).astype(np.float))
-            # row["pfB"] = np.median(np.array(new_Data['pfB']).astype(np.float))
-            # row["pfC"] = np.median(np.array(new_Data['pfC']).astype(np.float))
-            # row["epiA"] = np.median(np.array(new_Data['epiA']).astype(np.float))
-            # row["epiB"] = np.median(np.array(new_Data['epiB']).astype(np.float))
-            # row["epiC"] = np.median(np.array(new_Data['epiC']).astype(np.float))
-            # row["trTemp"] = np.median(np.array(new_Data['trTemp']).astype(np.float))
-            print(row)
-
-
-            old_tapPos = new_tapPos
+            rownum = 1
             sTime = data['dates']
-            eTime = 0
-            count = 0
-            elePowerSum = 0
+            old_tapPos = data['tapPos']
+
+            for index in new_Data_keys:
+                new_Data[index] = []
+                new_Data[index].append(data[index])
+
 
         else:
-            eTime = data['dates']
-            count += 1
-            elePowerSum += data['avgElePower']
-            for index in new_Data_keys:
-                new_Data[index].append(data[index])
+            new_tapPos = data['tapPos']
+            if (old_tapPos != new_tapPos):
+
+                sTime2 = datetime.datetime(int(sTime[0:4]), int(sTime[5:7]), int(sTime[8:10]), int(sTime[11:13]),
+                                           int(sTime[14:16]), int(sTime[17:19]))
+                eTime2 = datetime.datetime(int(eTime[0:4]), int(eTime[5:7]), int(eTime[8:10]), int(eTime[11:13]),
+                                           int(eTime[14:16]), int(eTime[17:19]))
+                stayTime = (eTime2 - sTime2).seconds
+                row = {}
+                row["old_tapPos"] = old_tapPos
+                row["new_tapPos"] = new_tapPos
+                row["sTime"] = sTime2.strftime("%Y-%m-%d %H:%M:%S")
+                row["eTime"] = eTime2.strftime("%Y-%m-%d %H:%M:%S")
+                row["stayTime"] = stayTime
+
+                row["ElePowerSum"] = elePowerSum
+                row["ElePowerPerSec"] = elePowerSum / count
+                row["ampereA2_Max"] = np.max(np.array(new_Data['ampereA2']).astype(np.float))
+                row["ampereB2_Max"] = np.max(np.array(new_Data['ampereB2']).astype(np.float))
+                row["ampereC2_Max"] = np.max(np.array(new_Data['ampereC2']).astype(np.float))
+                row["ampereA2_Min"] = np.min(np.array(new_Data['ampereA2']).astype(np.float))
+                row["ampereB2_Min"] = np.min(np.array(new_Data['ampereB2']).astype(np.float))
+                row["ampereC2_Min"] = np.min(np.array(new_Data['ampereC2']).astype(np.float))
+                row["ampereA2_Avg"] = np.mean(np.array(new_Data['ampereA2']).astype(np.float))
+                row["ampereB2_Avg"] = np.mean(np.array(new_Data['ampereB2']).astype(np.float))
+                row["ampereC2_Avg"] = np.mean(np.array(new_Data['ampereC2']).astype(np.float))
+                row["epiA_Max"] = np.max(np.array(new_Data['epiA']).astype(np.float))
+                row["epiB_Max"] = np.max(np.array(new_Data['epiB']).astype(np.float))
+                row["epiC_Max"] = np.max(np.array(new_Data['epiC']).astype(np.float))
+                row["epiA_Min"] = np.min(np.array(new_Data['epiA']).astype(np.float))
+                row["epiB_Min"] = np.min(np.array(new_Data['epiB']).astype(np.float))
+                row["epiC_Min"] = np.min(np.array(new_Data['epiC']).astype(np.float))
+                row["epiA_Avg"] = np.mean(np.array(new_Data['epiA']).astype(np.float))
+                row["epiB_Avg"] = np.mean(np.array(new_Data['epiB']).astype(np.float))
+                row["epiC_Avg"] = np.mean(np.array(new_Data['epiC']).astype(np.float))
+
+                print(row)
+
+                old_tapPos = new_tapPos
+                sTime = data['dates']
+                eTime = 0
+                count = 0
+                elePowerSum = 0
+
+            else:
+                eTime = data['dates']
+                count += 1
+                elePowerSum += data['avgElePower']
+                for index in new_Data_keys:
+                    new_Data[index].append(data[index])
 
 
 
