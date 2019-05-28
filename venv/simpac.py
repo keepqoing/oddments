@@ -65,6 +65,8 @@ for dayReport in dayReport_list:
           dayReport['date'] + " " + dayReport['N1_TappingTime'] + ":00','%Y%m%d %H:%i:%s') AND STR_TO_DATE ('" + \
           dayReport['date'] + " " + dayReport['N2_TappingTime'] + ":00','%Y%m%d %H:%i:%s')"
     print(sql)
+
+
 # sql = "SHOW COLUMNS FROM TS_EFN_GETDATA"
 
     mycursor = mydb.cursor(dictionary=True)
@@ -130,7 +132,7 @@ for dayReport in dayReport_list:
                 row["epiB_Avg"] = np.mean(np.array(new_Data['epiB']).astype(np.float))
                 row["epiC_Avg"] = np.mean(np.array(new_Data['epiC']).astype(np.float))
 
-                print(row)
+                writer.writerow(row)
 
                 old_tapPos = new_tapPos
                 sTime = data['dates']
